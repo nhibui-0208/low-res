@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOW-RES OBJECTS</title>
+<style>
+  :root{--bg:#0d0d0f;--panel:#1a1a1e;--panel2:#232328;--line:#2e2e35;--text:#ececf0;--mute:#9a9aa6;--accent:#E1FF01;--r:14px}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{padding:28px 24px 8px;max-width:1500px;margin:0 auto}
+  h1{margin:0;font-size:28px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+  h1 span{color:var(--accent)}
+  header p{margin:4px 0 0;color:var(--mute);max-width:720px}
+  .app{display:grid;grid-template-columns:330px 1fr;gap:20px;padding:20px 24px 40px;max-width:1500px;margin:0 auto}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  .controls{align-self:start;position:sticky;top:16px}
+  .ctl{margin-bottom:14px}
+  .ctl .row{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin-bottom:4px}
+  .ctl .row b{color:var(--accent);font-weight:600}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--panel2);padding:4px;border-radius:10px;margin-bottom:14px}
+  button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 14px;color:var(--text);background:var(--panel2);transition:.18s}
+  button:hover:not(:disabled){background:#2d2d34;transform:translateY(-1px)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .seg button{background:transparent;padding:8px}
+  .seg button.on{background:var(--accent);color:#111400;font-weight:700}
+  .btn-main{background:var(--accent);color:#111400;font-weight:700;width:100%;margin-bottom:8px}
+  .btn-main:hover:not(:disabled){background:#ecff5c}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+  .hint{font-size:12px;color:var(--mute);margin-top:8px}
+  #msg{display:none;margin-bottom:14px;padding:10px 14px;border-radius:10px;background:#3a1c1c;border:1px solid #7a2f2f;color:#ffb4b4}
+  .stage{min-width:0}
+  .drop{border:2px dashed var(--line);border-radius:var(--r);min-height:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--mute);text-align:center;transition:.2s;cursor:pointer;background:var(--panel)}
+  .drop[hidden]{display:none}
+  .drop.over,.drop:hover{border-color:var(--accent);color:var(--text);background:#1b1e0c}
+  .drop svg{width:64px;height:64px;stroke:var(--accent)}
+  .drop h2{margin:0;color:var(--text);font-size:20px}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .card h3{margin:0 0 10px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+  .frame{position:relative;border-radius:10px;overflow:hidden;background:repeating-conic-gradient(#222 0 25%,#1b1b1b 0 50%) 0 0/16px 16px;min-height:120px}
+  .frame canvas{display:block;width:100%;height:auto}
+  .info{font-size:12px;color:var(--mute);margin-top:8px;min-height:18px}
+  .empty{padding:40px 10px;text-align:center;color:var(--mute);font-size:13px}
+  .overlay{position:absolute;inset:0;background:rgba(10,10,12,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:5;backdrop-filter:blur(2px)}
+  .overlay.show{display:flex}
+  .spin{width:46px;height:46px;border:4px solid #333;border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .bar{width:70%;height:8px;background:#2a2a30;border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s ease}
+  #status{font-size:13px;color:var(--text)}
+  .cmp{margin-top:16px}
+  .cmp[hidden],#workspace[hidden]{display:none}
+  .cmpbox{position:relative;cursor:ew-resize;touch-action:none;user-select:none;--pos:50%}
+  .cmpbox canvas{display:block;width:100%;height:auto}
+  .cmpbox .top{position:absolute;inset:0;clip-path:inset(0 0 0 var(--pos))}
+  .cmpbox .top canvas{height:100%}
+  .divider{position:absolute;top:0;bottom:0;left:var(--pos);width:2px;background:var(--accent);transform:translateX(-1px);pointer-events:none}
+  .divider::after{content:"⇆";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:var(--accent);color:#111400;display:grid;place-items:center;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.5)}
+  .tag{position:absolute;top:8px;padding:2px 8px;border-radius:6px;font-size:11px;background:rgba(0,0,0,.6);pointer-events:none;z-index:2}
+  @media(max-width:900px){.app{grid-template-columns:1fr}.controls{order:2;position:static}.pair{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Low-Res <span>Objects</span></h1>
+  <p>Upload an image and turn it into a smudgy, heavily upscaled low-res texture, like a 3D-scan blob. Everything runs locally in your browser.</p>
+</header>
+
+<div class="app">
+  <aside class="panel controls">
+    <div id="msg" role="alert"></div>
+    <input type="file" id="file" accept="image/png,image/jpeg,image/webp" hidden>
+    <button class="btn-main" id="choose" style="background:var(--panel2);color:var(--text)">Choose file</button>
+    <div id="sliders"></div>
+    <div class="seg" id="modeSeg">
+      <button data-m="smooth" class="on">Smooth (blurry)</button>
+      <button data-m="pixel">Pixelated</button>
+    </div>
+    <button class="btn-main" id="gen" disabled>Generate</button>
+    <div class="grid2">
+      <button id="reset">Reset</button>
+      <button id="rand">Randomize</button>
+    </div>
+    <div class="grid2">
+      <button id="dlPng" disabled>Download PNG</button>
+      <button id="dlJpg" disabled>Download JPG</button>
+    </div>
+    <div class="hint">Blur is skipped in Pixelated mode to keep hard blocks. After the first generation, changes apply automatically.</div>
+  </aside>
+
+  <main class="stage">
+    <div class="drop" id="drop">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="9" r="1.5"/><path d="M21 16l-5-5-8 8"/><path d="M12 3v0"/></svg>
+      <h2>Drop an image here</h2>
+      <div>or click to choose a file (PNG, JPG, WebP)</div>
+    </div>
+
+    <div id="workspace" hidden>
+      <div class="pair">
+        <div class="panel card">
+          <h3>Original</h3>
+          <div class="frame"><canvas id="origCanvas"></canvas></div>
+          <div class="info" id="origInfo"></div>
+        </div>
+        <div class="panel card">
+          <h3>Result</h3>
+          <div class="frame">
+            <canvas id="resCanvas" width="0" height="0"></canvas>
+            <div class="empty" id="resEmpty">Press Generate to see the result</div>
+            <div class="overlay" id="overlay">
+              <div class="spin"></div>
+              <div class="bar"><i id="barFill"></i></div>
+              <div id="status">Starting…</div>
+            </div>
+          </div>
+          <div class="info" id="resInfo"></div>
+        </div>
+      </div>
+
+      <div class="panel cmp" id="cmpPanel" hidden>
+        <h3 style="margin:0 0 10px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)">Before / After</h3>
+        <div class="frame cmpbox" id="cmpBox">
+          <canvas id="cmpA"></canvas>
+          <div class="top"><canvas id="cmpB"></canvas></div>
+          <div class="divider"></div>
+          <span class="tag" style="left:8px">BEFORE</span>
+          <span class="tag" style="right:8px">AFTER</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------- Config ---------- */
+  const MAX_SIDE = 2048;      // max working size (long side)
+  const MIN_MS = 1200;        // minimum loading time for the manual run
+  // Each slider has exactly 5 notches (indexes 0-4) mapped to these values; "def" is the default notch index
+  const CFG = [
+    {k:'res',   l:'Resolution (blocks)',  vals:[8,24,40,96,256],   def:2, u:''},
+    {k:'blur',  l:'Blur amount',          vals:[0,6,12,20,30],     def:1, u:'px'},
+    {k:'levels',l:'Color levels',         vals:[2,4,8,16,32],      def:3, u:''},
+    {k:'noise', l:'Noise / grain',        vals:[0,20,40,70,100],   def:1, u:''},
+    {k:'jpeg',  l:'JPEG artifact quality',vals:[1,10,30,60,100],   def:2, u:''},
+    {k:'mix',   l:'Original mix',         vals:[0,25,50,75,100],   def:0, u:'%'}
+  ];
+
+  /* ---------- State ---------- */
+  const $ = id => document.getElementById(id);
+  const work = document.createElement('canvas');   // working copy of the source
+  const result = document.createElement('canvas'); // full-res result (for download)
+  const origCanvas = $('origCanvas'), resCanvas = $('resCanvas');
+  let pixelated = false, hasImage = false, hasResult = false, busy = false, pending = false;
+  let debounceT = null, srcURL = null, fileInfo = '';
+
+  /* ---------- Build sliders ---------- */
+  CFG.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'ctl';
+    d.innerHTML = `<div class="row"><span>${c.l}</span><b id="v_${c.k}"></b></div>
+      <input type="range" id="s_${c.k}" min="0" max="4" step="1" value="${c.def}">`;
+    $('sliders').appendChild(d);
+    $('s_' + c.k).addEventListener('input', () => { label(c); scheduleAuto(); });
+    label(c);
+  });
+  function label(c){ $('v_' + c.k).textContent = c.vals[+$('s_' + c.k).value] + c.u; }
+  const val = k => CFG.find(c => c.k === k).vals[+$('s_' + k).value];
+
+  /* ---------- Helpers ---------- */
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const frame = () => new Promise(r => requestAnimationFrame(() => r()));
+  const fmtSize = b => b > 1048576 ? (b/1048576).toFixed(2) + ' MB' : Math.round(b/1024) + ' KB';
+
+  function showError(t){ const m = $('msg'); m.textContent = t; m.style.display = t ? 'block' : 'none'; }
+
+  /* ---------- Image loading ---------- */
+  async function loadFile(file){
+    showError('');
+    if (!file || !/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+      showError('Invalid file type. Please use PNG, JPG or WebP.'); return;
+    }
+    if (srcURL) URL.revokeObjectURL(srcURL);
+    srcURL = URL.createObjectURL(file);
+    const img = new Image();
+    try {
+      await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('load')); img.src = srcURL; });
+    } catch (e) {
+      URL.revokeObjectURL(srcURL); srcURL = null;
+      showError('Could not load this image. The file may be corrupted.'); return;
+    }
+    // Downscale to working size if needed
+    const k = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+    work.width = w; work.height = h;
+    const x = work.getContext('2d');
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+    x.clearRect(0,0,w,h); x.drawImage(img, 0, 0, w, h);
+    // The pixels are copied to the canvas, so the object URL is no longer needed
+    URL.revokeObjectURL(srcURL); srcURL = null;
+
+    origCanvas.width = w; origCanvas.height = h;
+    origCanvas.getContext('2d').drawImage(work, 0, 0);
+    fileInfo = `${img.naturalWidth}×${img.naturalHeight}px · ${fmtSize(file.size)}` + (k < 1 ? ` · working size ${w}×${h}` : '');
+    $('origInfo').textContent = fileInfo;
+
+    hasImage = true; hasResult = false;
+    $('drop').hidden = true; $('workspace').hidden = false;
+    $('cmpPanel').hidden = true;
+    resCanvas.width = 0; resCanvas.height = 0; $('resEmpty').style.display = '';
+    $('resInfo').textContent = '';
+    $('gen').disabled = false; $('dlPng').disabled = $('dlJpg').disabled = true;
+  }
+
+  /* ---------- Effect pipeline ---------- */
+  // Step-wise halving gives a cleaner average than one huge downscale
+  function downscale(src, tw, th){
+    let c = src;
+    while (c.width / 2 > tw || c.height / 2 > th) {
+      const nw = Math.max(tw, Math.ceil(c.width/2)), nh = Math.max(th, Math.ceil(c.height/2));
+      const n = mk(nw, nh), x = n.getContext('2d');
+      x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+      x.drawImage(c, 0, 0, nw, nh); c = n;
+    }
+    const f = mk(tw, th), fx = f.getContext('2d');
+    fx.imageSmoothingEnabled = true; fx.imageSmoothingQuality = 'high';
+    fx.drawImage(c, 0, 0, tw, th);
+    return f;
+  }
+
+  async function runPipeline(ui){
+    const w = work.width, h = work.height;
+    const P = {res: val('res'), blur: val('blur'), lv: val('levels'), noise: val('noise'), q: val('jpeg'), mix: val('mix')};
+    const t0 = performance.now();
+    const per = ui ? MIN_MS / 5 : 0;
+    const step = async (text, pct) => {
+      if (!ui) return;
+      $('status').textContent = text; $('barFill').style.width = pct + '%';
+      await frame(); await sleep(per);
+    };
+
+    // Step 1: downscale
+    await step('Downscaling…', 10);
+    const sc = P.res / Math.max(w, h);
+    const sw = Math.max(1, Math.round(w * sc)), sh = Math.max(1, Math.round(h * sc));
+    const small = downscale(work, sw, sh);
+
+    // Step 2: posterize
+    await step('Quantizing colors…', 35);
+    const sx = small.getContext('2d');
+    const id = sx.getImageData(0, 0, sw, sh), d = id.data, n = P.lv - 1;
+    for (let i = 0; i < d.length; i += 4)
+      for (let j = 0; j < 3; j++) d[i+j] = Math.round(Math.round(d[i+j] / 255 * n) / n * 255);
+    sx.putImageData(id, 0, 0);
+
+    // Step 3: upscale (smooth = bilinear blobs, pixel = nearest neighbour)
+    let out = mk(w, h), ox = out.getContext('2d');
+    ox.imageSmoothingEnabled = !pixelated; ox.imageSmoothingQuality = 'high';
+    ox.drawImage(small, 0, 0, w, h);
+
+    // Step 4: blur
+    await step('Blurring…', 60);
+    if (P.blur > 0 && !pixelated) {
+      const t = mk(w, h), tx = t.getContext('2d');
+      tx.drawImage(out, 0, 0); // underlay so blurred edges don't fade to transparent
+      if ('filter' in tx) { tx.filter = `blur(${P.blur}px)`; tx.drawImage(out, 0, 0); tx.filter = 'none'; }
+      else { // fallback (e.g. Safari): blur by shrinking and re-enlarging
+        const f = 1 / (1 + P.blur), s = downscale(out, Math.max(1, Math.round(w*f)), Math.max(1, Math.round(h*f)));
+        tx.imageSmoothingEnabled = true; tx.drawImage(s, 0, 0, w, h);
+      }
+      out = t; ox = out.getContext('2d');
+    }
+
+    // Optional: mix original detail back in
+    if (P.mix > 0) { ox.globalAlpha = P.mix / 100; ox.drawImage(work, 0, 0); ox.globalAlpha = 1; }
+
+    // Step 5: grain + JPEG artifacts
+    await step('Adding noise…', 80);
+    if (P.noise > 0) {
+      const g = ox.getImageData(0, 0, w, h), p = g.data, amp = P.noise * 1.5;
+      for (let i = 0; i < p.length; i += 4) {
+        const v = (Math.random() - 0.5) * amp;
+        p[i] += v; p[i+1] += v; p[i+2] += v; // clamped automatically
+      }
+      ox.putImageData(g, 0, 0);
+    }
+    if (P.q < 100) {
+      const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', P.q / 100));
+      if (blob) {
+        const bmp = await createImageBitmap(blob);
+        ox.globalAlpha = 1; ox.drawImage(bmp, 0, 0); bmp.close && bmp.close();
+      }
+    }
+
+    await step('Finishing…', 100);
+    if (ui) { const left = MIN_MS - (performance.now() - t0); if (left > 0) await sleep(left); }
+
+    // Publish the result
+    result.width = w; result.height = h;
+    result.getContext('2d').drawImage(out, 0, 0);
+    resCanvas.width = w; resCanvas.height = h;
+    resCanvas.getContext('2d').drawImage(result, 0, 0);
+    $('resEmpty').style.display = 'none';
+    $('resInfo').textContent = `${w}×${h}px · ${pixelated ? 'Pixelated' : 'Smooth'} · ${sw}×${sh} blocks`;
+    for (const [id2, src] of [['cmpA', work], ['cmpB', result]]) {
+      const c = $(id2); c.width = w; c.height = h; c.getContext('2d').drawImage(src, 0, 0);
+    }
+    $('cmpPanel').hidden = false;
+  }
+
+  /* ---------- Run controller ---------- */
+  async function run(ui){
+    if (!hasImage) { showError('Upload an image first.'); return; }
+    if (busy) { pending = true; return; }
+    busy = true; showError('');
+    $('gen').disabled = true;
+    if (ui) { $('barFill').style.width = '0%'; $('overlay').classList.add('show'); }
+    try {
+      await runPipeline(ui);
+      hasResult = true; $('dlPng').disabled = $('dlJpg').disabled = false;
+    } catch (e) {
+      console.error(e); showError('Something went wrong while processing the image.');
+    } finally {
+      $('overlay').classList.remove('show');
+      busy = false; $('gen').disabled = false;
+      if (pending) { pending = false; run(false); }
+    }
+  }
+  function scheduleAuto(){
+    if (!hasResult) return;
+    clearTimeout(debounceT);
+    debounceT = setTimeout(() => run(false), 300);
+  }
+
+  /* ---------- Controls ---------- */
+  $('gen').addEventListener('click', () => run(true));
+  $('reset').addEventListener('click', () => {
+    CFG.forEach(c => { $('s_' + c.k).value = c.def; label(c); });
+    setMode(false); scheduleAuto();
+  });
+  $('rand').addEventListener('click', () => {
+    CFG.forEach(c => { $('s_' + c.k).value = Math.floor(Math.random() * 5); label(c); });
+    setMode(Math.random() < 0.3); scheduleAuto();
+  });
+  function setMode(p){
+    pixelated = p;
+    document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', (b.dataset.m === 'pixel') === p));
+  }
+  document.querySelectorAll('#modeSeg button').forEach(b =>
+    b.addEventListener('click', () => { setMode(b.dataset.m === 'pixel'); scheduleAuto(); }));
+
+  /* ---------- File input / drag & drop ---------- */
+  $('choose').addEventListener('click', () => $('file').click());
+  $('drop').addEventListener('click', () => $('file').click());
+  $('file').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
+  ['dragenter','dragover'].forEach(t => window.addEventListener(t, e => { e.preventDefault(); $('drop').classList.add('over'); }));
+  ['dragleave','drop'].forEach(t => window.addEventListener(t, e => { e.preventDefault(); $('drop').classList.remove('over'); }));
+  window.addEventListener('drop', e => { if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]); });
+
+  /* ---------- Before / after slider ---------- */
+  const box = $('cmpBox');
+  const setPos = e => {
+    const r = box.getBoundingClientRect();
+    box.style.setProperty('--pos', Math.min(100, Math.max(0, (e.clientX - r.left) / r.width * 100)) + '%');
+  };
+  box.addEventListener('pointerdown', e => { box.setPointerCapture(e.pointerId); setPos(e); box.onpointermove = setPos; });
+  box.addEventListener('pointerup', () => { box.onpointermove = null; });
+
+  /* ---------- Download ---------- */
+  function download(type, name, q){
+    if (!hasResult) return;
+    result.toBlob(blob => {
+      if (!blob) { showError('Export failed.'); return; }
+      const url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, type, q);
+  }
+  $('dlPng').addEventListener('click', () => download('image/png', 'low-res-result.png'));
+  $('dlJpg').addEventListener('click', () => download('image/jpeg', 'low-res-result.jpg', 0.92));
+})();
+</script>
+</body>
+</html>
